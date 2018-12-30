@@ -23,25 +23,27 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <getopt.h>
 #include <dirent.h>
 
 #define PROGRAM_NAME "tagm"
-#define VERSION_NUMBER "0.1"
+#define VERSION_NUMBER "0.2"
 
 int main(int argc, char *argv[])
 {
 	static struct option long_options[] = {
 		{"version", no_argument, NULL, 'v'},
 		{"help", no_argument, NULL, 'h'},
-		{"path", required_argument, NULL, 'p'}
+		{"dir", required_argument, NULL, 'd'},
+		{"directory", required_argument, NULL, 'd'}
 	};
 	/*
 	 * Command line argument parsing loop.@TODO
 	 */
 	int opt, loptind;
 	char *pathstr = NULL;
-	while ((opt = getopt_long(argc, argv, "vhp:", 
+	while ((opt = getopt_long(argc, argv, "vhd:", //@TODO change optstr
 					long_options, &loptind)) > 0){
 		switch (opt){
 		case 'v':
@@ -51,7 +53,7 @@ int main(int argc, char *argv[])
 		case 'h':
 			printf("%s\n", "Usage goes here");//@TODO
 			exit(EXIT_FAILURE);
-		case 'p':
+		case 'd':
 			pathstr = optarg;
 			break;
 		default:
@@ -64,8 +66,15 @@ int main(int argc, char *argv[])
 	#define CURRENT_DIR "./"
 	int n;
 	struct dirent **namelist;
+
+	errno = 0;
 	n = scandir(pathstr != NULL ? pathstr : CURRENT_DIR, &namelist,
 			NULL, alphasort);
+	if (errno){
+		perror("tagm.c:74"); //@TODO IMPROVE ERROR MESSAGES
+		exit(EXIT_FAILURE);
+	}
+	//@TODO implement actual functionality
 	while (n--){
 		printf("%s\n", namelist[n]->d_name);
 		free(namelist[n]);
