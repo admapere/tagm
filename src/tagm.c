@@ -26,9 +26,12 @@
 #include <errno.h>
 #include <getopt.h>
 #include <dirent.h>
+#include <regex.h>
 
 #define PROGRAM_NAME "tagm"
 #define VERSION_NUMBER "0.2"
+
+static int filter(const struct dirent *dir);
 
 int main(int argc, char *argv[])
 {
@@ -54,7 +57,7 @@ int main(int argc, char *argv[])
 			printf("%s\n", "Usage goes here");//@TODO create help menu
 			exit(EXIT_FAILURE);
 		case 'd':
-			sscanf(optarg, "%ms", &pathstr);
+			sscanf(optarg, "%ms", &pathstr);//@TODO memory might run out, handle this
 			break;
 		default:
 			exit(EXIT_FAILURE);
@@ -69,7 +72,7 @@ int main(int argc, char *argv[])
 	struct dirent **namelist;
 
 	errno = 0;
-	n = scandir(pathstr != NULL ? pathstr : CURRENT_DIR, &namelist, NULL, alphasort);
+	n = scandir(pathstr != NULL ? pathstr : CURRENT_DIR, &namelist, *filter, alphasort);
 	if (errno){
 		perror("FATAL ERROR:"); //@TODO IMPROVE ERROR MESSAGES
 		exit(EXIT_FAILURE);
@@ -82,4 +85,21 @@ int main(int argc, char *argv[])
 	free(namelist);
 	
 	return EXIT_SUCCESS;
+}
+/* 
+ * Parses name of directory to ensure that it is only *.mp3 files that are
+ * passed unto the next section of the program.
+ */
+static int filter(const struct dirent *dir)
+{
+	const char *fname = dir->d_name;
+	const char *regex = "(.*).mp3";//@TODO may match too many characters
+	regex_t preg;
+
+	regcomp(&preg, regex, REG_EXTENDED | REG_NOSUB);
+	if (REG_NOMATCH == regexec(&preg, fname, 0, NULL, 0)){
+		return 0;
+	}else{
+		return 1;
+	}
 }
