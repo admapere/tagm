@@ -32,46 +32,46 @@
 
 int main(int argc, char *argv[])
 {
+	/*
+	 * Command line argument parsing loop.
+	 */
 	static struct option long_options[] = {
 		{"version", no_argument, NULL, 'v'},
 		{"help", no_argument, NULL, 'h'},
 		{"dir", required_argument, NULL, 'd'},
 		{"directory", required_argument, NULL, 'd'}
 	};
-	/*
-	 * Command line argument parsing loop.@TODO
-	 */
 	int opt, loptind;
 	char *pathstr = NULL;
-	while ((opt = getopt_long(argc, argv, "vhd:", //@TODO change optstr
-					long_options, &loptind)) > 0){
+	const char *optstr = "vhd:";
+	while ((opt = getopt_long(argc, argv, optstr, long_options, &loptind)) > 0){
 		switch (opt){
 		case 'v':
 			printf("%s %s\n", PROGRAM_NAME, VERSION_NUMBER);
-			printf("%s\n", "<COPYRIGHT MESSAGE>");//@TODO
+			printf("%s\n", "<COPYRIGHT MESSAGE>");//@TODO write copyright message
 			exit(EXIT_FAILURE);
 		case 'h':
-			printf("%s\n", "Usage goes here");//@TODO
+			printf("%s\n", "Usage goes here");//@TODO create help menu
 			exit(EXIT_FAILURE);
 		case 'd':
-			pathstr = optarg;
+			sscanf(optarg, "%ms", &pathstr);
 			break;
 		default:
 			exit(EXIT_FAILURE);
 		}
 	}
 	/*
-	 * Testing scandir  @TODO
+	 * Scans directory entered in the pathstring as an argument to -d 
+	 * --directory, or --dir. Otherwise, scans current directory.
 	 */
 	#define CURRENT_DIR "./"
 	int n;
 	struct dirent **namelist;
 
 	errno = 0;
-	n = scandir(pathstr != NULL ? pathstr : CURRENT_DIR, &namelist,
-			NULL, alphasort);
+	n = scandir(pathstr != NULL ? pathstr : CURRENT_DIR, &namelist, NULL, alphasort);
 	if (errno){
-		perror("tagm.c:74"); //@TODO IMPROVE ERROR MESSAGES
+		perror("FATAL ERROR:"); //@TODO IMPROVE ERROR MESSAGES
 		exit(EXIT_FAILURE);
 	}
 	//@TODO implement actual functionality
