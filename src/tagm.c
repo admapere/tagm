@@ -27,6 +27,8 @@
 #include <getopt.h>
 #include <dirent.h>
 #include <regex.h>
+#include <id3v2lib.h>
+#include <unistd.h>
 
 #define PROGRAM_NAME "tagm"
 #define VERSION_NUMBER "0.2"
@@ -42,7 +44,6 @@ int main(int argc, char *argv[])
 		{"directory", required_argument, NULL, 'd'}
 	};
 	int opt, loptind;
-	char *path = NULL;
 	const char *optstr = "vhd:";
 	while ((opt = getopt_long(argc, argv, optstr, long_options, &loptind)) > 0){
 		switch (opt){
@@ -54,8 +55,8 @@ int main(int argc, char *argv[])
 			printf("%s\n", "Usage goes here");//@TODO create help menu
 			exit(EXIT_SUCCESS);
 		case 'd':
-			path = malloc(strlen(optarg) * sizeof(*path) + 1);
-			strcpy(path, optarg);
+			//@TODO sanitize input
+			chdir(optarg);
 			break;
 		default:
 			exit(EXIT_FAILURE);
@@ -65,20 +66,42 @@ int main(int argc, char *argv[])
 	 * Scans directory entered in the path as an argument to -d 
 	 * --directory, or --dir. Otherwise, scans current directory.
 	 */
-	#define CURRENT_DIR "./"
-	int n;
+	int file_n;
 	struct dirent **namelist;
 	errno = 0;
-	n = scandir(path != NULL ? path : CURRENT_DIR, &namelist,
-			*filter, alphasort);
+	file_n = scandir("./", &namelist, filter, alphasort);
 	if (errno){
-		perror(path); //@TODO IMPROVE ERROR MESSAGES
+		perror(""); //@TODO IMPROVE ERROR MESSAGES
 		exit(EXIT_FAILURE);
 	}
-	//@TODO implement actual functionality
-	while (n--){
-		printf("%s\n", namelist[n]->d_name);
-		free(namelist[n]);
+	/*
+	 * Go through list of  mp3 files and print out the meta data
+	 */
+	enum mp3_frames {ART, ALB, TRK, TIT, CMNT};
+	char *list[] = {"Artist:", "Album:", "Track:", "Title:"};
+	char *filename = NULL;
+	ID3v2_tag *tag = NULL;
+	ID3v2_frame *frame_list[] = {NULL, NULL, NULL, NULL};
+	size_t frame_list_len = sizeof(frame_list) / sizeof(*frame_list);
+
+	while (file_n--){
+		filename = namelist[file_n]->d_name;
+		printf("%s\n", filename);
+		
+		tag = load_tag(filename);
+		frame_list[ART] = tag_get_artist(tag);
+		frame_list[ALB] = tag_get_album(tag);
+		frame_list[TRK] = tag_get_track(tag);
+		frame_list[TIT] = tag_get_title(tag);
+
+		for (int i = 0; i < frame_list_len; ++i){
+			ID3v2_frame_text_content *text = NULL;
+			text = parse_text_frame_content(frame_list[i]);
+			printf("\t%s %s\n", list[i], text->data);
+			free(text);
+			free(frame_list[i]);
+		}
+		free(namelist[file_n]);
 	}
 	free(namelist);
 	
